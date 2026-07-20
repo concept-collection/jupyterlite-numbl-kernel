@@ -16,10 +16,6 @@ build/
 
 # Yarn (jlpm)
 .yarn/
-# The lockfile is intentionally not committed yet: it would pin the numbl
-# dependency, which is released in lockstep with this extension. Remove this
-# line and commit yarn.lock once the referenced numbl version is on npm.
-yarn.lock
 
 # JupyterLite build artifacts
 .jupyterlite.doit.db
