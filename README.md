@@ -57,10 +57,13 @@ jupyter lite build --contents my-notebooks --output-dir dist
 
 The `demo/` directory in this repo contains the demo site sources
 (notebooks + requirements); `.github/workflows/deploy.yml` builds and
-deploys it to GitHub Pages. The `demo/content/advanced/` folder holds a
-systematic seven-notebook tour of the language (data types, matrices,
-control flow, linear algebra, data structures, numerical methods, and
-plotting).
+deploys it to GitHub Pages. `demo/content/` is a numbered walkthrough: an
+intro (with plotting), a systematic language tour (data types, matrices,
+control flow, linear algebra, data structures, numerical methods,
+plotting), the advanced MATLAB object model (classes and OOP, namespaces
+and packages), and finally installing packages with `mip`. The class and
+package `.m` files live next to the notebooks (e.g. `Vec2.m`, `+geom/`,
+`@Poly/`) and are synced into the session recursively.
 
 ### Always-fresh content (demo choice)
 

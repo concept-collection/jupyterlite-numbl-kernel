@@ -193,44 +193,62 @@ export class NumblKernel extends BaseKernel {
   }
 
   /**
-   * Sync `.m` files from the notebook's directory into the session VFS.
-   * numbl rescans its working directory on every execution, so a file
-   * written here becomes callable on this same execute() call, and an
-   * edit made in the Jupyter editor takes effect the next time a cell runs.
-   * Best-effort: a contents-manager error (e.g. no browser drive mounted)
-   * just skips the sync rather than failing the cell.
+   * Sync `.m` files from the notebook's directory (recursively) into the
+   * session VFS, preserving the relative layout. Recursing matters for
+   * MATLAB's folder-based constructs: `+namespace/`, `@class/`, and
+   * `private/` folders all live in subdirectories and must reach the
+   * session at the right paths. numbl rescans its working directory on
+   * every execution, so a file written here is callable on this same
+   * execute() call, and an edit in the Jupyter editor takes effect on the
+   * next run. Best-effort: a contents-manager error (e.g. no browser drive
+   * mounted) just skips the sync rather than failing the cell.
    */
   private async _syncWorkspaceFiles(session: NumblSession): Promise<void> {
     if (!this._contents) {
       return;
     }
-    const dir = this.location;
-    let listing: Contents.IModel;
-    try {
-      listing = await this._contents.get(dir, { content: true });
-    } catch {
-      return;
-    }
-    const files = Array.isArray(listing.content) ? listing.content : [];
-    for (const entry of files as Contents.IModel[]) {
-      if (entry.type !== 'file' || !entry.name.endsWith('.m')) {
-        continue;
-      }
-      if (this._syncedMTimes.get(entry.path) === entry.last_modified) {
-        continue;
-      }
+    const root = this.location;
+    const rootPrefix = root ? root.replace(/\/$/, '') + '/' : '';
+
+    const syncDir = async (dir: string): Promise<void> => {
+      let listing: Contents.IModel;
       try {
-        const file = await this._contents.get(entry.path, {
-          content: true,
-          type: 'file',
-          format: 'text'
-        });
-        session.writeFile(entry.name, String(file.content));
-        this._syncedMTimes.set(entry.path, entry.last_modified);
+        listing = await this._contents!.get(dir, { content: true });
       } catch {
-        // Skip this file; other workspace files still sync.
+        return;
       }
-    }
+      const entries = Array.isArray(listing.content) ? listing.content : [];
+      for (const entry of entries as Contents.IModel[]) {
+        if (entry.type === 'directory') {
+          await syncDir(entry.path);
+          continue;
+        }
+        if (entry.type !== 'file' || !entry.name.endsWith('.m')) {
+          continue;
+        }
+        if (this._syncedMTimes.get(entry.path) === entry.last_modified) {
+          continue;
+        }
+        try {
+          const file = await this._contents!.get(entry.path, {
+            content: true,
+            type: 'file',
+            format: 'text'
+          });
+          // Write at the path relative to the notebook directory so that
+          // +pkg/@class/private layouts land correctly under the session root.
+          const rel = entry.path.startsWith(rootPrefix)
+            ? entry.path.slice(rootPrefix.length)
+            : entry.name;
+          session.writeFile(rel, String(file.content));
+          this._syncedMTimes.set(entry.path, entry.last_modified);
+        } catch {
+          // Skip this file; other workspace files still sync.
+        }
+      }
+    };
+
+    await syncDir(root);
   }
 
   /**
