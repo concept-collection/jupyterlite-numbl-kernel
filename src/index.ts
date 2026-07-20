@@ -32,7 +32,7 @@ const kernel: JupyterFrontEndPlugin<void> = {
         }
       },
       create: async (options: IKernel.IOptions): Promise<IKernel> => {
-        return new NumblKernel(options);
+        return new NumblKernel(options, app.serviceManager.contents);
       }
     });
   }

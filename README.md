@@ -8,8 +8,10 @@ The language engine is [numbl](https://github.com/flatironinstitute/numbl), an
 open-source MATLAB-syntax implementation in TypeScript. Each kernel runs a
 numbl session in a Web Worker in the page: variables persist across cells,
 console output streams into the running cell, MATLAB plotting commands render
-as figures in cell outputs (including interactive 3-D), and the `mip` package
-manager can install MATLAB-syntax packages from GitHub — all client-side.
+as figures in cell outputs (including interactive 3-D), the `mip` package
+manager can install MATLAB-syntax packages from GitHub, and `.m` files next
+to the notebook are part of the workspace (named functions, called from
+cells) — all client-side.
 
 **Demo site:**
 <https://concept-collection.github.io/jupyterlite-numbl-kernel/> (deployed
@@ -27,11 +29,14 @@ link, and executable by anyone with a browser.
 Three small pieces, all in this repo:
 
 - **Kernel** (`src/kernel.ts`) — implements JupyterLite's `BaseKernel` from
-  `@jupyterlite/services`. `execute_request` forwards the cell source to a
-  numbl session (`createNumblSession` / `session.execute` from
-  `numbl/browser`, a Web Worker that numbl manages). Output streams back as
-  `stream` messages; the run's plot instructions are published as
-  `display_data` with the mime type `application/vnd.numbl.figure+json`.
+  `@jupyterlite/services`. Before each `execute_request`, `.m` files in the
+  notebook's directory (read via the JupyterLite contents manager) are
+  synced into the numbl session; the cell source then runs against the
+  session's persistent workspace (`createNumblSession` /
+  `session.execute` from `numbl/browser`, a Web Worker that numbl manages).
+  Output streams back as `stream` messages; the run's plot instructions are
+  published as `display_data` with the mime type
+  `application/vnd.numbl.figure+json`.
 - **Figure renderer** (`src/mime.tsx`) — a JupyterLab mime renderer for that
   mime type: it replays the instructions through numbl's figures reducer and
   mounts numbl's React `FigureView` (from `numbl/graphics`). Outputs are
@@ -63,11 +68,14 @@ deploys it to GitHub Pages.
   figures its own commands produce; `hold on` does not span cells.
 - **Named function definitions are not supported inside cells** (a numbl
   REPL limitation) — anonymous functions work; named functions belong in
-  `.m` files.
+  `.m` files next to the notebook (see `demo/content/statsutils.m`), which
+  this kernel syncs into the session automatically.
+- The `.m`-file sync is **one-way**: deleting a `.m` file from the file
+  browser leaves its function defined until the kernel restarts, and files
+  written by cell code (e.g. via `fopen`) don't appear back in the file
+  browser.
 - **uihtml** components render display-only; the MATLAB↔HTML event bridge
   is not wired into outputs yet.
-- Notebook files from the JupyterLite contents (e.g. sibling `.m` files)
-  are not yet synced into the numbl session's virtual filesystem.
 - numbl itself is not MATLAB: it covers a large, tested subset of the
   language and toolbox surface. See the
   [numbl repo](https://github.com/flatironinstitute/numbl) for scope.

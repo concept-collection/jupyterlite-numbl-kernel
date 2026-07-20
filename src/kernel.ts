@@ -1,6 +1,7 @@
-import type { KernelMessage } from '@jupyterlab/services';
+import type { Contents, KernelMessage } from '@jupyterlab/services';
 
 import { BaseKernel } from '@jupyterlite/services';
+import type { IKernel } from '@jupyterlite/services';
 
 import { createNumblSession } from 'numbl/browser';
 import type { NumblSession } from 'numbl/browser';
@@ -17,8 +18,24 @@ export const FIGURE_MIME = 'application/vnd.numbl.figure+json';
  * cell, and figures are published as display_data with the numbl figure
  * mime type. Restarting the kernel disposes the session, so the next
  * execution boots a fresh workspace.
+ *
+ * Before every execution, `.m` files sitting next to the notebook (in the
+ * JupyterLite contents) are synced into the session, so named functions can
+ * be defined in the file browser, edited in the Jupyter editor, and called
+ * from cells — numbl rescans the working directory on each execution, so
+ * edits apply on the next run. The sync is one-way and additive: deleting a
+ * `.m` file leaves its function defined until the kernel restarts.
  */
 export class NumblKernel extends BaseKernel {
+  /**
+   * @param options Standard kernel options.
+   * @param contents The (browser-side) contents manager used to read `.m`
+   * workspace files from the notebook's directory.
+   */
+  constructor(options: IKernel.IOptions, contents?: Contents.IManager) {
+    super(options);
+    this._contents = contents ?? null;
+  }
   /**
    * Handle a kernel_info_request message.
    */
@@ -70,6 +87,7 @@ export class NumblKernel extends BaseKernel {
       );
     }
 
+    await this._syncWorkspaceFiles(session);
     const result = await session.execute(content.code);
 
     if (!result.ok) {
@@ -173,6 +191,47 @@ export class NumblKernel extends BaseKernel {
   }
 
   /**
+   * Sync `.m` files from the notebook's directory into the session VFS.
+   * numbl rescans its working directory on every execution, so a file
+   * written here becomes callable on this same execute() call, and an
+   * edit made in the Jupyter editor takes effect the next time a cell runs.
+   * Best-effort: a contents-manager error (e.g. no browser drive mounted)
+   * just skips the sync rather than failing the cell.
+   */
+  private async _syncWorkspaceFiles(session: NumblSession): Promise<void> {
+    if (!this._contents) {
+      return;
+    }
+    const dir = this.location;
+    let listing: Contents.IModel;
+    try {
+      listing = await this._contents.get(dir, { content: true });
+    } catch {
+      return;
+    }
+    const files = Array.isArray(listing.content) ? listing.content : [];
+    for (const entry of files as Contents.IModel[]) {
+      if (entry.type !== 'file' || !entry.name.endsWith('.m')) {
+        continue;
+      }
+      if (this._syncedMTimes.get(entry.path) === entry.last_modified) {
+        continue;
+      }
+      try {
+        const file = await this._contents.get(entry.path, {
+          content: true,
+          type: 'file',
+          format: 'text'
+        });
+        session.writeFile(entry.name, String(file.content));
+        this._syncedMTimes.set(entry.path, entry.last_modified);
+      } catch {
+        // Skip this file; other workspace files still sync.
+      }
+    }
+  }
+
+  /**
    * Boot the numbl session lazily on first use, so creating the kernel is
    * instant and boot progress (mip download, cached-package restore) streams
    * into the first executed cell.
@@ -203,4 +262,6 @@ export class NumblKernel extends BaseKernel {
   }
 
   private _session: Promise<NumblSession> | null = null;
+  private readonly _contents: Contents.IManager | null;
+  private readonly _syncedMTimes = new Map<string, string>();
 }
