@@ -57,7 +57,10 @@ jupyter lite build --contents my-notebooks --output-dir dist
 
 The `demo/` directory in this repo contains the demo site sources
 (notebooks + requirements); `.github/workflows/deploy.yml` builds and
-deploys it to GitHub Pages.
+deploys it to GitHub Pages. The `demo/content/advanced/` folder holds a
+systematic seven-notebook tour of the language (data types, matrices,
+control flow, linear algebra, data structures, numerical methods, and
+plotting).
 
 ### Always-fresh content (demo choice)
 
