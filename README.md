@@ -1,7 +1,8 @@
 # jupyterlite-numbl-kernel
 
-Run [**numbl**](https://github.com/flatironinstitute/numbl) in
-[JupyterLite](https://jupyterlite.readthedocs.io/) notebooks — **entirely in
+Run [**numbl**](https://github.com/flatironinstitute/numbl) — numerical
+computing with **MATLAB syntax** — in
+[JupyterLite](https://jupyterlite.readthedocs.io/) notebooks, **entirely in
 the browser**, with no server, no kernel process, and nothing for the reader
 to install.
 
