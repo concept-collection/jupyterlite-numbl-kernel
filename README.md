@@ -61,11 +61,19 @@ deploys it to GitHub Pages.
 
 ### Always-fresh content (demo choice)
 
-By default JupyterLite copies notebooks into the browser's IndexedDB on
-first visit, and that local copy then wins over the deployed files **even
-after a redeploy** — so returning visitors keep seeing stale content. Since
-this is a demo, `demo/jupyter-lite.json` opts into JupyterLite's in-memory
-storage so every page reload re-seeds the latest deployed notebooks:
+JupyterLite caches content in two layers that both defeat redeploys:
+
+1. It copies notebooks into the browser's IndexedDB on first visit, and that
+   local copy then wins over the deployed files **even after a redeploy**.
+2. Its **service worker** is an offline caching proxy for the app itself and
+   for content files, so it can keep serving the old app and old notebooks
+   after a redeploy until it happens to update.
+
+Since this is a demo, `demo/jupyter-lite.json` neutralizes both: it uses
+JupyterLite's in-memory storage (so every reload re-seeds the latest
+deployed notebooks) and disables the service-worker plugin (which the numbl
+kernel doesn't need — it reads content on the main thread, not via the
+service worker's kernel drive):
 
 ```json
 {
@@ -73,13 +81,18 @@ storage so every page reload re-seeds the latest deployed notebooks:
     "enableMemoryStorage": true,
     "contentsStorageDrivers": ["memoryStorageDriver"],
     "settingsStorageDrivers": ["memoryStorageDriver"],
-    "workspacesStorageDrivers": ["memoryStorageDriver"]
+    "workspacesStorageDrivers": ["memoryStorageDriver"],
+    "disabledExtensions": [
+      "@jupyterlite/application-extension:service-worker-manager"
+    ]
   }
 }
 ```
 
 The trade-off is that a visitor's edits live only for the session and are
-discarded on reload. For a real deployment where users should keep their
+discarded on reload. A visitor who loaded the site **before** the service
+worker was disabled still has it registered and must clear browser data
+(or `Help > Clear Browser Data`) once to get past it. For a real deployment where users should keep their
 work, omit these keys (the default persistent storage) and bump
 `contentsStorageName` when you want to force-refresh shipped content.
 numbl's own package cache (installed via `mip`) lives in a separate

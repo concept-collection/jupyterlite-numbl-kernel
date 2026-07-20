@@ -6,6 +6,9 @@
     "enableMemoryStorage": true,
     "contentsStorageDrivers": ["memoryStorageDriver"],
     "settingsStorageDrivers": ["memoryStorageDriver"],
-    "workspacesStorageDrivers": ["memoryStorageDriver"]
+    "workspacesStorageDrivers": ["memoryStorageDriver"],
+    "disabledExtensions": [
+      "@jupyterlite/application-extension:service-worker-manager"
+    ]
   }
 }
