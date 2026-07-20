@@ -57,6 +57,33 @@ The `demo/` directory in this repo contains the demo site sources
 (notebooks + requirements); `.github/workflows/deploy.yml` builds and
 deploys it to GitHub Pages.
 
+### Always-fresh content (demo choice)
+
+By default JupyterLite copies notebooks into the browser's IndexedDB on
+first visit, and that local copy then wins over the deployed files **even
+after a redeploy** — so returning visitors keep seeing stale content. Since
+this is a demo, `demo/jupyter-lite.json` opts into JupyterLite's in-memory
+storage so every page reload re-seeds the latest deployed notebooks:
+
+```json
+{
+  "jupyter-config-data": {
+    "enableMemoryStorage": true,
+    "contentsStorageDrivers": ["memoryStorageDriver"],
+    "settingsStorageDrivers": ["memoryStorageDriver"],
+    "workspacesStorageDrivers": ["memoryStorageDriver"]
+  }
+}
+```
+
+The trade-off is that a visitor's edits live only for the session and are
+discarded on reload. For a real deployment where users should keep their
+work, omit these keys (the default persistent storage) and bump
+`contentsStorageName` when you want to force-refresh shipped content.
+numbl's own package cache (installed via `mip`) lives in a separate
+IndexedDB store and is unaffected, so `mip`-installed packages still
+persist across reloads.
+
 ## Limitations (proof of concept)
 
 - **No interrupt**: a runaway cell can only be stopped by restarting the
