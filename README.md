@@ -1,17 +1,17 @@
 # jupyterlite-numbl-kernel
 
-A MATLAB-syntax kernel for [JupyterLite](https://jupyterlite.readthedocs.io/) —
-notebooks that run **entirely in the browser**, with no server, no kernel
-process, and nothing for the reader to install.
+Run [**numbl**](https://github.com/flatironinstitute/numbl) in
+[JupyterLite](https://jupyterlite.readthedocs.io/) notebooks — **entirely in
+the browser**, with no server, no kernel process, and nothing for the reader
+to install.
 
-The language engine is [numbl](https://github.com/flatironinstitute/numbl), an
-open-source MATLAB-syntax implementation in TypeScript. Each kernel runs a
+numbl is an open-source numerical-computing engine, written in TypeScript,
+that uses MATLAB syntax — so `.m` code runs unchanged. This kernel runs a
 numbl session in a Web Worker in the page: variables persist across cells,
-console output streams into the running cell, MATLAB plotting commands render
-as figures in cell outputs (including interactive 3-D), the `mip` package
-manager can install MATLAB-syntax packages from GitHub, and `.m` files next
-to the notebook are part of the workspace (named functions, called from
-cells) — all client-side.
+console output streams into the running cell, plots render as figures in cell
+outputs (including interactive 3-D), the `mip` package manager can install
+numbl packages from GitHub, and `.m` files next to the notebook are part of
+the workspace (named functions, called from cells) — all client-side.
 
 **Demo site:**
 <https://concept-collection.github.io/jupyterlite-numbl-kernel/> (deployed
@@ -19,10 +19,11 @@ from this repo via GitHub Pages — see `.github/workflows/deploy.yml`)
 
 ## Why
 
-Existing MATLAB/Octave Jupyter kernels require the real product installed
-behind a server. This kernel is a proof of concept that a MATLAB-syntax
-notebook can be a static web page: hostable on GitHub Pages, shareable as a
-link, and executable by anyone with a browser.
+This kernel is a proof of concept that a numbl notebook can be a static web
+page: hostable on GitHub Pages, shareable as a link, and executable by anyone
+with a browser. Because numbl uses MATLAB syntax and needs no MATLAB/Octave
+install (or any server process), the same `.m` code that would otherwise
+require a licensed product behind a server just runs in the tab.
 
 ## How it works
 

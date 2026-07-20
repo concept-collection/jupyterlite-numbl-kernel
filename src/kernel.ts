@@ -10,8 +10,8 @@ import type { NumblSession } from 'numbl/browser';
 export const FIGURE_MIME = 'application/vnd.numbl.figure+json';
 
 /**
- * A JupyterLite kernel that executes MATLAB-syntax code with numbl,
- * entirely in the browser.
+ * A JupyterLite kernel that runs numbl — a MATLAB-syntax numerical
+ * computing engine — entirely in the browser.
  *
  * Each kernel owns one numbl session (a Web Worker managed by numbl):
  * variables persist across cells, console output streams to the running
@@ -44,10 +44,12 @@ export class NumblKernel extends BaseKernel {
       implementation: 'numbl',
       implementation_version: '0.1.0',
       language_info: {
+        // numbl uses MATLAB syntax; the octave/matlab modes drive
+        // highlighting in the notebook and on nbconvert export.
         codemirror_mode: 'octave',
         file_extension: '.m',
         mimetype: 'text/x-octave',
-        name: 'matlab',
+        name: 'numbl',
         nbconvert_exporter: 'script',
         pygments_lexer: 'matlab',
         version: 'numbl'
@@ -142,7 +144,7 @@ export class NumblKernel extends BaseKernel {
 
   /**
    * Handle an `is_complete_request` message: treat every submission as a
-   * complete MATLAB statement (the console runs on Enter).
+   * complete numbl statement (the console runs on Enter).
    */
   async isCompleteRequest(
     content: KernelMessage.IIsCompleteRequestMsg['content']

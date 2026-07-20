@@ -1,15 +1,15 @@
 {
   "name": "jupyterlite-numbl-kernel",
   "version": "0.1.0",
-  "description": "MATLAB-syntax (numbl) kernel for JupyterLite — notebooks run entirely in the browser",
+  "description": "Run numbl (MATLAB-syntax numerical computing) in JupyterLite notebooks, entirely in the browser",
   "keywords": [
     "jupyter",
     "jupyterlab",
     "jupyterlab-extension",
     "jupyterlite",
     "jupyterlite-kernel",
-    "matlab",
-    "numbl"
+    "numbl",
+    "matlab"
   ],
   "homepage": "https://github.com/concept-collection/jupyterlite-numbl-kernel",
   "bugs": {
