@@ -1,0 +1,10 @@
+/* Each figure gets a fixed-height box; numbl's FigureView fills its parent
+   and the plot canvas measures the container. */
+.numbl-figure {
+  position: relative;
+  width: 100%;
+  max-width: 680px;
+  height: 420px;
+  margin: 4px 0;
+  background: #ffffff;
+}

@@ -1,0 +1,60 @@
+[build-system]
+requires = ["hatchling>=1.5.0", "jupyterlab>=4.0.0,<5", "hatch-nodejs-version>=0.3.2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "jupyterlite-numbl-kernel"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.9"
+classifiers = [
+    "Framework :: Jupyter",
+    "Framework :: Jupyter :: JupyterLab",
+    "Framework :: Jupyter :: JupyterLab :: 4",
+    "Framework :: Jupyter :: JupyterLab :: Extensions",
+    "Framework :: Jupyter :: JupyterLab :: Extensions :: Prebuilt",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+dependencies = []
+dynamic = ["version", "description", "authors", "urls", "keywords"]
+
+[tool.hatch.version]
+source = "nodejs"
+
+[tool.hatch.metadata.hooks.nodejs]
+fields = ["description", "authors", "urls", "keywords"]
+
+[tool.hatch.build.targets.sdist]
+artifacts = ["jupyterlite_numbl_kernel/labextension"]
+exclude = [".github", "demo"]
+
+[tool.hatch.build.targets.wheel.shared-data]
+"jupyterlite_numbl_kernel/labextension" = "share/jupyter/labextensions/jupyterlite-numbl-kernel"
+"install.json" = "share/jupyter/labextensions/jupyterlite-numbl-kernel/install.json"
+
+[tool.hatch.build.hooks.version]
+path = "jupyterlite_numbl_kernel/_version.py"
+
+[tool.hatch.build.hooks.jupyter-builder]
+dependencies = ["hatch-jupyter-builder>=0.5"]
+build-function = "hatch_jupyter_builder.npm_builder"
+ensured-targets = [
+    "jupyterlite_numbl_kernel/labextension/static/style.js",
+    "jupyterlite_numbl_kernel/labextension/package.json",
+]
+skip-if-exists = ["jupyterlite_numbl_kernel/labextension/static/style.js"]
+
+[tool.hatch.build.hooks.jupyter-builder.build-kwargs]
+build_cmd = "build:prod"
+npm = ["jlpm"]
+
+[tool.hatch.build.hooks.jupyter-builder.editable-build-kwargs]
+build_cmd = "install:extension"
+npm = ["jlpm"]
+source_dir = "src"
+build_dir = "jupyterlite_numbl_kernel/labextension"
+
+[tool.check-wheel-contents]
+ignore = ["W002"]

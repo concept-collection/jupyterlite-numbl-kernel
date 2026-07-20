@@ -1,0 +1,5 @@
+# JupyterLite site build requirements. The kernel itself is installed
+# separately from the repo root: pip install .
+jupyterlite-core==0.8.1
+jupyterlab~=4.6.0
+notebook~=7.6.0
