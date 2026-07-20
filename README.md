@@ -1,22 +1,22 @@
 # jupyterlite-numbl-kernel
 
-Run [**numbl**](https://github.com/flatironinstitute/numbl) — numerical
-computing with **MATLAB syntax** — in
-[JupyterLite](https://jupyterlite.readthedocs.io/) notebooks, **entirely in
-the browser**, with no server, no kernel process, and nothing for the reader
-to install.
+Run [**numbl**](https://numbl.org), numerical computing with **MATLAB
+syntax**, in [JupyterLite](https://jupyterlite.readthedocs.io/) notebooks,
+**entirely in the browser**, with no server, no kernel process, and nothing
+for the reader to install.
 
 numbl is an open-source numerical-computing engine, written in TypeScript,
-that uses MATLAB syntax — so `.m` code runs unchanged. This kernel runs a
+that uses MATLAB syntax, so `.m` code runs unchanged. This kernel runs a
 numbl session in a Web Worker in the page: variables persist across cells,
 console output streams into the running cell, plots render as figures in cell
 outputs (including interactive 3-D), the `mip` package manager can install
 numbl packages from GitHub, and `.m` files next to the notebook are part of
-the workspace (named functions, called from cells) — all client-side.
+the workspace (named functions, called from cells). Everything runs
+client-side.
 
 **Demo site:**
 <https://concept-collection.github.io/jupyterlite-numbl-kernel/> (deployed
-from this repo via GitHub Pages — see `.github/workflows/deploy.yml`)
+from this repo via GitHub Pages; see `.github/workflows/deploy.yml`)
 
 ## Why
 
@@ -30,7 +30,7 @@ require a licensed product behind a server just runs in the tab.
 
 Three small pieces, all in this repo:
 
-- **Kernel** (`src/kernel.ts`) — implements JupyterLite's `BaseKernel` from
+- **Kernel** (`src/kernel.ts`): implements JupyterLite's `BaseKernel` from
   `@jupyterlite/services`. Before each `execute_request`, `.m` files in the
   notebook's directory (read via the JupyterLite contents manager) are
   synced into the numbl session; the cell source then runs against the
@@ -39,12 +39,12 @@ Three small pieces, all in this repo:
   Output streams back as `stream` messages; the run's plot instructions are
   published as `display_data` with the mime type
   `application/vnd.numbl.figure+json`.
-- **Figure renderer** (`src/mime.tsx`) — a JupyterLab mime renderer for that
+- **Figure renderer** (`src/mime.tsx`): a JupyterLab mime renderer for that
   mime type: it replays the instructions through numbl's figures reducer and
   mounts numbl's React `FigureView` (from `numbl/graphics`). Outputs are
   plain JSON, so saved notebooks re-render wherever the extension is
   installed.
-- **Kernel registration** (`src/index.ts`) — registers the kernelspec with
+- **Kernel registration** (`src/index.ts`): registers the kernelspec with
   JupyterLite's `IKernelSpecs`.
 
 ## Build a site with it
@@ -52,7 +52,7 @@ Three small pieces, all in this repo:
 ```bash
 pip install jupyterlite-core jupyterlite-numbl-kernel
 jupyter lite build --contents my-notebooks --output-dir dist
-# dist/ is a static site — serve it anywhere
+# dist/ is a static site; serve it anywhere
 ```
 
 The `demo/` directory in this repo contains the demo site sources
@@ -72,7 +72,7 @@ JupyterLite caches content in two layers that both defeat redeploys:
 Since this is a demo, `demo/jupyter-lite.json` neutralizes both: it uses
 JupyterLite's in-memory storage (so every reload re-seeds the latest
 deployed notebooks) and disables the service-worker plugin (which the numbl
-kernel doesn't need — it reads content on the main thread, not via the
+kernel doesn't need, since it reads content on the main thread, not via the
 service worker's kernel drive):
 
 ```json
@@ -109,7 +109,7 @@ persist across reloads.
 - **Figures are per-cell** (like inline matplotlib): each cell renders the
   figures its own commands produce; `hold on` does not span cells.
 - **Named function definitions are not supported inside cells** (a numbl
-  REPL limitation) — anonymous functions work; named functions belong in
+  REPL limitation): anonymous functions work, and named functions belong in
   `.m` files next to the notebook (see `demo/content/statsutils.m`), which
   this kernel syncs into the session automatically.
 - The `.m`-file sync is **one-way**: deleting a `.m` file from the file
@@ -119,8 +119,7 @@ persist across reloads.
 - **uihtml** components render display-only; the MATLAB↔HTML event bridge
   is not wired into outputs yet.
 - numbl itself is not MATLAB: it covers a large, tested subset of the
-  language and toolbox surface. See the
-  [numbl repo](https://github.com/flatironinstitute/numbl) for scope.
+  language and toolbox surface. See [numbl](https://numbl.org) for scope.
 
 ## Development
 
@@ -147,7 +146,7 @@ python -m http.server -d demo/_output 8000
 
 ## License
 
-Apache-2.0. Built on [numbl](https://github.com/flatironinstitute/numbl) and
+Apache-2.0. Built on [numbl](https://numbl.org) and
 the [JupyterLite](https://github.com/jupyterlite/jupyterlite) kernel API;
 scaffolding follows the
 [jupyterlite/echo-kernel](https://github.com/jupyterlite/echo-kernel)

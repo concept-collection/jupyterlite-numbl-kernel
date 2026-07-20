@@ -18,7 +18,7 @@ export const FIGURE_MIME = 'application/vnd.numbl.figure+json';
 
 /**
  * Render one cell's plot instructions: replay them through numbl's figures
- * reducer (from an empty state — figures are per-cell, like inline
+ * reducer (from an empty state; figures are per-cell, like inline
  * matplotlib) and mount numbl's React figure renderer for each resulting
  * figure. Outputs are plain JSON, so saved notebooks re-render on reload
  * wherever this extension is installed.

@@ -10,8 +10,8 @@ import type { NumblSession } from 'numbl/browser';
 export const FIGURE_MIME = 'application/vnd.numbl.figure+json';
 
 /**
- * A JupyterLite kernel that runs numbl — a MATLAB-syntax numerical
- * computing engine — entirely in the browser.
+ * A JupyterLite kernel that runs numbl (a MATLAB-syntax numerical
+ * computing engine) entirely in the browser.
  *
  * Each kernel owns one numbl session (a Web Worker managed by numbl):
  * variables persist across cells, console output streams to the running
@@ -22,7 +22,7 @@ export const FIGURE_MIME = 'application/vnd.numbl.figure+json';
  * Before every execution, `.m` files sitting next to the notebook (in the
  * JupyterLite contents) are synced into the session, so named functions can
  * be defined in the file browser, edited in the Jupyter editor, and called
- * from cells — numbl rescans the working directory on each execution, so
+ * from cells. numbl rescans the working directory on each execution, so
  * edits apply on the next run. The sync is one-way and additive: deleting a
  * `.m` file leaves its function defined until the kernel restarts.
  */
@@ -61,7 +61,7 @@ export class NumblKernel extends BaseKernel {
       help_links: [
         {
           text: 'numbl',
-          url: 'https://github.com/flatironinstitute/numbl'
+          url: 'https://numbl.org'
         }
       ]
     };
@@ -105,7 +105,7 @@ export class NumblKernel extends BaseKernel {
         data: {
           [FIGURE_MIME]: { version: 1, plotInstructions: instructions },
           'text/plain':
-            '<numbl figure — install jupyterlite-numbl-kernel to render>'
+            '<numbl figure (install jupyterlite-numbl-kernel to render)>'
         },
         metadata: {}
       });
