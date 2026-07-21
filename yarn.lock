@@ -3014,7 +3014,7 @@ __metadata:
     eslint-config-prettier: ^8.10.0
     eslint-plugin-prettier: ^5.0.0
     npm-run-all2: ^7.0.1
-    numbl: ^0.4.15
+    numbl: ^0.4.16
     prettier: ^3.0.0
     react: ^18.2.0
     react-dom: ^18.2.0
@@ -4036,9 +4036,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"numbl@npm:^0.4.15":
-  version: 0.4.15
-  resolution: "numbl@npm:0.4.15"
+"numbl@npm:^0.4.16":
+  version: 0.4.16
+  resolution: "numbl@npm:0.4.16"
   dependencies:
     fflate: ^0.8.2
     h5wasm: ^0.10.3
@@ -4064,7 +4064,7 @@ __metadata:
       optional: true
   bin:
     numbl: dist-cli/cli.js
-  checksum: dd9b5676a78add735655a3c3fdb2a0ca3f5435cdc5b90288383e2382a2deb677b4786010c27c4d0ddf7090f3bb091c0c9b948835c070428d2321e5bd30f91bb7
+  checksum: bd93d555af962cae504d88412a4b79bcd6dfbfafdee5889d4a515fad2b2f0cc9b7d43455821f886d3de4f715b5791b04eec01234c6399e2962934228bea040b6
   languageName: node
   linkType: hard
 

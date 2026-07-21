@@ -140,11 +140,12 @@ degrades to a no-op there.
   restarting the kernel), and a **tight loop with no function or builtin
   calls** (e.g. `while true; x = x + 1; end`) is JIT-compiled straight
   through with no cancellation checkpoint, so it too needs a restart.
-- **No `input()`** (stdin): numbl's browser session has no stdin channel in
-  its worker protocol yet, so `input()` is unsupported. (This is now a
-  missing feature, not a headers limitation — the demo is cross-origin
-  isolated for interrupt, so the `SharedArrayBuffer` such a channel would
-  need is available.)
+- **`input()`** (stdin) works: a cell that calls `input()` prompts in the
+  notebook and blocks until you answer, then resumes with your entry —
+  numeric (`n = input('n? ')`) or, with `input(prompt, 's')`, a string. Like
+  interrupt it uses a `SharedArrayBuffer`, so it needs the page to be
+  cross-origin isolated; on a non-isolated deployment `input()` raises
+  ("input() is not available in this environment") rather than prompting.
 - **Figures are per-cell** (like inline matplotlib): each cell renders the
   figures its own commands produce; `hold on` does not span cells.
 - **Named function definitions are not supported inside cells** (a numbl
@@ -162,12 +163,14 @@ degrades to a no-op there.
 
 ## Development
 
-Requires Python ≥ 3.9 and NodeJS ≥ 20, and `numbl >= 0.4.15` on npm — the
-first release with the browser cancellation API (`session.interrupt()` /
-`canInterrupt`) that cell interrupt uses. (numbl `0.4.14` added the
-incremental `session.execute` browser API this kernel is built on.) To
-develop against an unreleased numbl checkout, run `npm pack` there and point
-the `numbl` dependency at the tarball.
+Requires Python ≥ 3.9 and NodeJS ≥ 20, and `numbl >= 0.4.16` on npm — the
+release with the browser stdin API (`onInputRequest` / `provideInput` /
+`canInput`) behind `input()`; it also carries the `session.interrupt()` /
+`canInterrupt` cancellation API for cell interrupt (added in 0.4.15) and the
+incremental `session.execute` browser API this kernel is built on (0.4.14).
+To develop against an unreleased numbl checkout, run `npm pack` there and
+point the `numbl` dependency at the tarball (as `package.json` does while
+0.4.16 is being published).
 
 ```bash
 python -m venv .venv && source .venv/bin/activate

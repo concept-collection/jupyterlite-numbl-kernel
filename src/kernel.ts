@@ -178,10 +178,21 @@ export class NumblKernel extends BaseKernel {
   }
 
   /**
-   * Send an `input_reply` message. stdin is not supported.
+   * Handle an `input_reply`: hand the user's line to the numbl worker, which
+   * is blocked inside `input()` waiting for it. JupyterLite delivers
+   * `input_reply` out of band (it bypasses the message mutex that the running
+   * cell's `execute_request` still holds), so this arrives mid-execution as
+   * intended. Requires cross-origin isolation; without it `input()` errors in
+   * numbl before ever prompting, so this is never reached.
    */
   inputReply(content: KernelMessage.IInputReplyMsg['content']): void {
-    // no-op
+    const value =
+      'value' in content && typeof content.value === 'string'
+        ? content.value
+        : '';
+    void this._session
+      ?.then(session => session.provideInput(value))
+      .catch(() => undefined);
   }
 
   async commOpen(msg: KernelMessage.ICommOpenMsg): Promise<void> {
@@ -296,7 +307,10 @@ export class NumblKernel extends BaseKernel {
     this._session ??= createNumblSession({
       onOutput: text => this.stream({ name: 'stdout', text }),
       onProgress: message =>
-        this.stream({ name: 'stdout', text: `[numbl] ${message}\n` })
+        this.stream({ name: 'stdout', text: `[numbl] ${message}\n` }),
+      // `input()` in the running cell: prompt the front end. The worker is
+      // blocked waiting for the reply, which arrives via inputReply().
+      onInputRequest: prompt => this.inputRequest({ prompt, password: false })
     });
     return this._session;
   }
