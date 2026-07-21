@@ -8,3 +8,4 @@ _output
 yarn.lock
 jupyterlite_numbl_kernel/labextension
 demo/content/**/*.ipynb
+demo/coi-serviceworker.js

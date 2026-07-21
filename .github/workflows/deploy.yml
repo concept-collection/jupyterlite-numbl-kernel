@@ -30,6 +30,9 @@ jobs:
       - name: Build the JupyterLite site
         run: jupyter lite build --lite-dir demo --contents content --output-dir dist
 
+      - name: Make the site cross-origin isolated (enables interrupt)
+        run: node demo/inject-coi.mjs dist
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

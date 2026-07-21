@@ -7,6 +7,7 @@ import { IKernelSpecs } from '@jupyterlite/services';
 import type { IKernel } from '@jupyterlite/services';
 
 import { NumblKernel } from './kernel';
+import { installInterruptBridge } from './interruptBridge';
 
 /** numbl's matrix logo, inlined so the spec needs no served resources. */
 const NUMBL_LOGO =
@@ -20,6 +21,8 @@ const kernel: JupyterFrontEndPlugin<void> = {
   autoStart: true,
   requires: [IKernelSpecs],
   activate: (app: JupyterFrontEnd, kernelspecs: IKernelSpecs) => {
+    // Route the Stop button to the running numbl session (see interruptBridge).
+    installInterruptBridge();
     kernelspecs.register({
       spec: {
         name: 'numbl',

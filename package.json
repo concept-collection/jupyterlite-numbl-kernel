@@ -55,7 +55,7 @@
     "@jupyterlab/rendermime-interfaces": "^3.9.0",
     "@jupyterlite/services": "^0.8.1",
     "@lumino/widgets": "^2.3.0",
-    "numbl": "^0.4.14",
+    "numbl": "^0.4.15",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },

@@ -105,13 +105,46 @@ numbl's own package cache (installed via `mip`) lives in a separate
 IndexedDB store and is unaffected, so `mip`-installed packages still
 persist across reloads.
 
+### Cross-origin isolation (for interrupt)
+
+Cell interrupt needs a `SharedArrayBuffer`, which browsers only expose on a
+**cross-origin-isolated** page (served with `Cross-Origin-Opener-Policy:
+same-origin` and `Cross-Origin-Embedder-Policy: credentialless`). GitHub Pages
+serves static files and can't set those headers, so the demo synthesizes them
+client-side with a small service worker, `demo/coi-serviceworker.js` (based on
+[coi-serviceworker](https://github.com/niccokunzmann/coi-serviceworker)). It
+only rewrites **same-origin** responses, so numbl's cross-origin `mip` download
+from its GitHub release still works.
+
+`demo/inject-coi.mjs` runs after `jupyter lite build`: it copies the worker to
+the site root and adds a `<script>` registering it to every generated page's
+`<head>` (the deploy workflow does this automatically). The worker adds no
+caching — it only injects headers — so it doesn't undermine the always-fresh
+content choice above. Service workers require a secure context, so view the
+site over `https://` or `http://localhost` / `http://127.0.0.1`; an `http://`
+LAN IP or an embedded/preview browser has no service worker, and interrupt
+degrades to a no-op there.
+
 ## Limitations (proof of concept)
 
-- **No interrupt**: a runaway cell can only be stopped by restarting the
-  kernel (restart works and gives a fresh workspace). Cooperative
-  cancellation exists in numbl but needs `SharedArrayBuffer`, i.e.
-  cross-origin isolation headers, which plain GitHub Pages doesn't set.
-- **No `input()`** (stdin), for the same reason.
+- **Interrupt** works cooperatively: the Stop button aborts the running cell
+  at the next loop iteration or function/builtin call, reports it as a
+  `KeyboardInterrupt`, and leaves the workspace intact (variables from before
+  the cell survive). It relies on a `SharedArrayBuffer` cancel flag that numbl
+  polls during execution, so the page must be **cross-origin isolated**
+  (`COOP`/`COEP`). Plain GitHub Pages can't set those headers, so the demo
+  ships a `coi-serviceworker` that synthesizes them (see [Cross-origin
+  isolation](#cross-origin-isolation-for-interrupt)). Two caveats: on a
+  deployment that is **not** cross-origin isolated the interrupt silently
+  falls back to a no-op (a runaway cell can then only be stopped by
+  restarting the kernel), and a **tight loop with no function or builtin
+  calls** (e.g. `while true; x = x + 1; end`) is JIT-compiled straight
+  through with no cancellation checkpoint, so it too needs a restart.
+- **No `input()`** (stdin): numbl's browser session has no stdin channel in
+  its worker protocol yet, so `input()` is unsupported. (This is now a
+  missing feature, not a headers limitation — the demo is cross-origin
+  isolated for interrupt, so the `SharedArrayBuffer` such a channel would
+  need is available.)
 - **Figures are per-cell** (like inline matplotlib): each cell renders the
   figures its own commands produce; `hold on` does not span cells.
 - **Named function definitions are not supported inside cells** (a numbl
@@ -129,10 +162,12 @@ persist across reloads.
 
 ## Development
 
-Requires Python ≥ 3.9 and NodeJS ≥ 20, and `numbl >= 0.4.14` on npm (the
-first release with the incremental `session.execute` browser API). To
-develop against an unreleased numbl checkout, run `npm pack` there and
-point the `numbl` dependency at the tarball.
+Requires Python ≥ 3.9 and NodeJS ≥ 20, and `numbl >= 0.4.15` on npm — the
+first release with the browser cancellation API (`session.interrupt()` /
+`canInterrupt`) that cell interrupt uses. (numbl `0.4.14` added the
+incremental `session.execute` browser API this kernel is built on.) To
+develop against an unreleased numbl checkout, run `npm pack` there and point
+the `numbl` dependency at the tarball.
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
@@ -145,7 +180,10 @@ pip install -e .      # editable install, registers the labextension
 # Build and serve the demo site locally
 pip install -r demo/requirements.txt
 jupyter lite build --lite-dir demo --contents content --output-dir demo/_output
+node demo/inject-coi.mjs demo/_output   # cross-origin isolation, for interrupt
 python -m http.server -d demo/_output 8000
+# then open http://localhost:8000 — a secure context, required for the
+# service worker (interrupt is a no-op without it)
 ```
 
 `jlpm watch` rebuilds on change during development.

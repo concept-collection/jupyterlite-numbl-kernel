@@ -6,6 +6,8 @@ import type { IKernel } from '@jupyterlite/services';
 import { createNumblSession } from 'numbl/browser';
 import type { NumblSession } from 'numbl/browser';
 
+import { registerInterruptor, unregisterInterruptor } from './interruptBridge';
+
 /** Mime type carrying a cell's plot instructions (see src/mime.tsx). */
 export const FIGURE_MIME = 'application/vnd.numbl.figure+json';
 
@@ -35,6 +37,9 @@ export class NumblKernel extends BaseKernel {
   constructor(options: IKernel.IOptions, contents?: Contents.IManager) {
     super(options);
     this._contents = contents ?? null;
+    // Let the interrupt bridge stop this kernel's running cell (the Stop
+    // button reaches us out of band; see src/interruptBridge.ts).
+    registerInterruptor(this.id, () => this.interrupt());
   }
   /**
    * Handle a kernel_info_request message.
@@ -91,6 +96,17 @@ export class NumblKernel extends BaseKernel {
 
     await this._syncWorkspaceFiles(session);
     const result = await session.execute(content.code);
+
+    if (result.aborted) {
+      // The Stop button interrupted this cell (cooperative cancellation via
+      // the shared cancel flag). numbl left the workspace at its pre-run
+      // state, so variables from before the cell survive. Report it the way
+      // an interrupted cell is reported elsewhere: a KeyboardInterrupt.
+      return this._errorReply(
+        'KeyboardInterrupt',
+        result.error ?? 'Execution interrupted'
+      );
+    }
 
     if (!result.ok) {
       return this._errorReply('NumblError', result.error ?? 'Unknown error');
@@ -181,12 +197,32 @@ export class NumblKernel extends BaseKernel {
   }
 
   /**
+   * Cooperatively interrupt the running cell. Signals the numbl session to
+   * abort its current `execute` at the next loop iteration or function call,
+   * leaving the persistent workspace intact (the interrupted cell resolves
+   * with `aborted: true`, reported as a KeyboardInterrupt). Invoked out of
+   * band by the interrupt bridge, since JupyterLite can't message a busy
+   * kernel (see src/interruptBridge.ts).
+   *
+   * A no-op when no run is in flight, or when the page is not cross-origin
+   * isolated — then `SharedArrayBuffer` is unavailable, `session.interrupt()`
+   * can't signal the worker, and a runaway cell can still only be stopped by
+   * restarting the kernel.
+   */
+  interrupt(): void {
+    void this._session
+      ?.then(session => session.interrupt())
+      .catch(() => undefined);
+  }
+
+  /**
    * Dispose the kernel and its numbl session (worker).
    */
   dispose(): void {
     if (this.isDisposed) {
       return;
     }
+    unregisterInterruptor(this.id);
     void this._session?.then(s => s.dispose()).catch(() => undefined);
     this._session = null;
     super.dispose();
