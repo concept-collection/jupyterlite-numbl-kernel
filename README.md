@@ -1,51 +1,42 @@
 # jupyterlite-numbl-kernel
 
-Run [**numbl**](https://numbl.org), numerical computing with **MATLAB
-syntax**, in [JupyterLite](https://jupyterlite.readthedocs.io/) notebooks,
-**entirely in the browser**, with no server, no kernel process, and nothing
-for the reader to install.
+Run [**numbl**](https://numbl.org) — numerical computing with **MATLAB
+syntax** — in [JupyterLite](https://jupyterlite.readthedocs.io/) notebooks,
+**entirely in the browser**. No server, no kernel process, nothing for the
+reader to install.
 
 numbl is an open-source numerical-computing engine, written in TypeScript,
-that uses MATLAB syntax, so `.m` code runs unchanged. This kernel runs a
-numbl session in a Web Worker in the page: variables persist across cells,
-console output streams into the running cell, plots render as figures in cell
-outputs (including interactive 3-D), the `mip` package manager can install
-numbl packages from GitHub, and `.m` files next to the notebook are part of
-the workspace (named functions, called from cells). Everything runs
-client-side.
+that uses MATLAB syntax, so `.m` code runs unchanged. This kernel runs a numbl
+session in a Web Worker on the page: variables persist across cells, console
+output streams into the running cell, plots render as figures (including
+interactive 3-D), and `.m` files next to the notebook are part of the
+workspace (named functions, called from cells). Everything runs client-side.
 
-**Demo site:**
-<https://concept-collection.github.io/jupyterlite-numbl-kernel/> (deployed
-from this repo via GitHub Pages; see `.github/workflows/deploy.yml`)
+**Demo:** <https://concept-collection.github.io/jupyterlite-numbl-kernel/>
+(deployed from this repo via GitHub Pages)
 
 ## Why
 
-This kernel is a proof of concept that a numbl notebook can be a static web
-page: hostable on GitHub Pages, shareable as a link, and executable by anyone
-with a browser. Because numbl uses MATLAB syntax and needs no MATLAB/Octave
-install (or any server process), the same `.m` code that would otherwise
-require a licensed product behind a server just runs in the tab.
+A numbl notebook can be a static web page: hostable on GitHub Pages, shareable
+as a link, and runnable by anyone with a browser. Because numbl uses MATLAB
+syntax and needs no MATLAB/Octave install (or any server), the same `.m` code
+that would otherwise sit behind a licensed product just runs in the tab.
 
 ## How it works
 
-Three small pieces, all in this repo:
+Three small pieces, all in `src/`:
 
-- **Kernel** (`src/kernel.ts`): implements JupyterLite's `BaseKernel` from
-  `@jupyterlite/services`. Before each `execute_request`, `.m` files in the
-  notebook's directory (read via the JupyterLite contents manager) are
-  synced into the numbl session; the cell source then runs against the
-  session's persistent workspace (`createNumblSession` /
-  `session.execute` from `numbl/browser`, a Web Worker that numbl manages).
-  Output streams back as `stream` messages; the run's plot instructions are
-  published as `display_data` with the mime type
-  `application/vnd.numbl.figure+json`.
-- **Figure renderer** (`src/mime.tsx`): a JupyterLab mime renderer for that
-  mime type: it replays the instructions through numbl's figures reducer and
-  mounts numbl's React `FigureView` (from `numbl/graphics`). Outputs are
-  plain JSON, so saved notebooks re-render wherever the extension is
-  installed.
-- **Kernel registration** (`src/index.ts`): registers the kernelspec with
-  JupyterLite's `IKernelSpecs`.
+- **Kernel** ([kernel.ts](src/kernel.ts)) implements JupyterLite's
+  `BaseKernel`. Before each cell runs, `.m` files in the notebook's directory
+  are synced into the numbl session; the cell then runs against the session's
+  persistent workspace (a Web Worker that numbl manages). Console output
+  streams back as `stream` messages, and plots are published as `display_data`
+  with the mime type `application/vnd.numbl.figure+json`.
+- **Figure renderer** ([mime.tsx](src/mime.tsx)) is a mime renderer for that
+  type: it replays the plot instructions and mounts numbl's React `FigureView`.
+  Outputs are plain JSON, so saved notebooks re-render wherever the extension
+  is installed.
+- **Registration** ([index.ts](src/index.ts)) registers the kernelspec.
 
 ## Build a site with it
 
@@ -55,122 +46,60 @@ jupyter lite build --contents my-notebooks --output-dir dist
 # dist/ is a static site; serve it anywhere
 ```
 
-The `demo/` directory in this repo contains the demo site sources
-(notebooks + requirements); `.github/workflows/deploy.yml` builds and
-deploys it to GitHub Pages. `demo/content/` is a numbered walkthrough: an
-intro (with plotting), a systematic language tour (data types, matrices,
-control flow, linear algebra, data structures, numerical methods,
-plotting), the advanced MATLAB object model (classes and OOP, namespaces
-and packages), and finally installing packages with `mip`. The class and
-package `.m` files live next to the notebooks (e.g. `Vec2.m`, `+geom/`,
-`@Poly/`) and are synced into the session recursively.
+`.m` files next to a notebook are synced into the session recursively, so
+MATLAB's folder-based `+namespace/`, `@class/`, and `private/` layouts work as
+expected.
 
-### Always-fresh content (demo choice)
+The `demo/` directory is the source of the demo site above — a numbered
+walkthrough of the language and the MATLAB object model (classes, namespaces,
+packages). [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)
+builds and deploys it to GitHub Pages.
 
-JupyterLite caches content in two layers that both defeat redeploys:
+### Fresh content on redeploy (demo choice)
 
-1. It copies notebooks into the browser's IndexedDB on first visit, and that
-   local copy then wins over the deployed files **even after a redeploy**.
-2. Its **service worker** is an offline caching proxy for the app itself and
-   for content files, so it can keep serving the old app and old notebooks
-   after a redeploy until it happens to update.
+JupyterLite caches notebooks in the browser (IndexedDB) and can keep serving
+stale copies from its service worker even after a redeploy. Because this is a
+demo, [`demo/jupyter-lite.json`](demo/jupyter-lite.json) uses in-memory
+storage and disables the service worker, so every reload re-seeds the latest
+deployed notebooks. The trade-off is that a visitor's edits last only for the
+session. For a real deployment where users keep their work, drop those
+settings and use JupyterLite's default persistent storage.
 
-Since this is a demo, `demo/jupyter-lite.json` neutralizes both: it uses
-JupyterLite's in-memory storage (so every reload re-seeds the latest
-deployed notebooks) and disables the service-worker plugin (which the numbl
-kernel doesn't need, since it reads content on the main thread, not via the
-service worker's kernel drive):
+### Cross-origin isolation (for interrupt and input)
 
-```json
-{
-  "jupyter-config-data": {
-    "enableMemoryStorage": true,
-    "contentsStorageDrivers": ["memoryStorageDriver"],
-    "settingsStorageDrivers": ["memoryStorageDriver"],
-    "workspacesStorageDrivers": ["memoryStorageDriver"],
-    "disabledExtensions": [
-      "@jupyterlite/application-extension:service-worker-manager"
-    ]
-  }
-}
-```
-
-The trade-off is that a visitor's edits live only for the session and are
-discarded on reload. A visitor who loaded the site **before** the service
-worker was disabled still has it registered and must clear browser data
-(or `Help > Clear Browser Data`) once to get past it. For a real deployment where users should keep their
-work, omit these keys (the default persistent storage) and bump
-`contentsStorageName` when you want to force-refresh shipped content.
-numbl's own package cache (installed via `mip`) lives in a separate
-IndexedDB store and is unaffected, so `mip`-installed packages still
-persist across reloads.
-
-### Cross-origin isolation (for interrupt)
-
-Cell interrupt needs a `SharedArrayBuffer`, which browsers only expose on a
-**cross-origin-isolated** page (served with `Cross-Origin-Opener-Policy:
-same-origin` and `Cross-Origin-Embedder-Policy: credentialless`). GitHub Pages
-serves static files and can't set those headers, so the demo synthesizes them
-client-side with a small service worker, `demo/coi-serviceworker.js` (based on
-[coi-serviceworker](https://github.com/niccokunzmann/coi-serviceworker)). It
-only rewrites **same-origin** responses, so numbl's cross-origin `mip` download
-from its GitHub release still works.
-
-`demo/inject-coi.mjs` runs after `jupyter lite build`: it copies the worker to
-the site root and adds a `<script>` registering it to every generated page's
-`<head>` (the deploy workflow does this automatically). The worker adds no
-caching — it only injects headers — so it doesn't undermine the always-fresh
-content choice above. Service workers require a secure context, so view the
-site over `https://` or `http://localhost` / `http://127.0.0.1`; an `http://`
-LAN IP or an embedded/preview browser has no service worker, and interrupt
-degrades to a no-op there.
+The Stop button and `input()` both rely on a `SharedArrayBuffer`, which
+browsers expose only on a **cross-origin-isolated** page (`COOP`/`COEP`
+headers). GitHub Pages can't set those headers, so the demo ships a small
+service worker, [`demo/coi-serviceworker.js`](demo/coi-serviceworker.js)
+(based on [coi-serviceworker](https://github.com/niccokunzmann/coi-serviceworker)),
+that synthesizes them client-side; [`demo/inject-coi.mjs`](demo/inject-coi.mjs)
+wires it into every generated page during the build. Without isolation,
+interrupt and `input()` degrade gracefully (see Limitations).
 
 ## Limitations (proof of concept)
 
-- **Interrupt** works cooperatively: the Stop button aborts the running cell
-  at the next loop iteration or function/builtin call, reports it as a
-  `KeyboardInterrupt`, and leaves the workspace intact (variables from before
-  the cell survive). It relies on a `SharedArrayBuffer` cancel flag that numbl
-  polls during execution, so the page must be **cross-origin isolated**
-  (`COOP`/`COEP`). Plain GitHub Pages can't set those headers, so the demo
-  ships a `coi-serviceworker` that synthesizes them (see [Cross-origin
-  isolation](#cross-origin-isolation-for-interrupt)). Two caveats: on a
-  deployment that is **not** cross-origin isolated the interrupt silently
-  falls back to a no-op (a runaway cell can then only be stopped by
-  restarting the kernel), and a **tight loop with no function or builtin
-  calls** (e.g. `while true; x = x + 1; end`) is JIT-compiled straight
-  through with no cancellation checkpoint, so it too needs a restart.
-- **`input()`** (stdin) works: a cell that calls `input()` prompts in the
-  notebook and blocks until you answer, then resumes with your entry —
-  numeric (`n = input('n? ')`) or, with `input(prompt, 's')`, a string. Like
-  interrupt it uses a `SharedArrayBuffer`, so it needs the page to be
-  cross-origin isolated; on a non-isolated deployment `input()` raises
-  ("input() is not available in this environment") rather than prompting.
-- **Figures are per-cell** (like inline matplotlib): each cell renders the
-  figures its own commands produce; `hold on` does not span cells.
-- **Named function definitions are not supported inside cells** (a numbl
-  REPL limitation): anonymous functions work, and named functions belong in
-  `.m` files next to the notebook (see `demo/content/statsutils.m`), which
-  this kernel syncs into the session automatically.
-- The `.m`-file sync is **one-way**: deleting a `.m` file from the file
-  browser leaves its function defined until the kernel restarts, and files
-  written by cell code (e.g. via `fopen`) don't appear back in the file
-  browser.
-- **uihtml** components render display-only; the MATLAB↔HTML event bridge
-  is not wired into outputs yet.
-- numbl itself is not MATLAB: it covers a large, tested subset of the
-  language and toolbox surface. See [numbl](https://numbl.org) for scope.
+- **Interrupt** is cooperative: the Stop button aborts the running cell at the
+  next loop iteration or function call, reports a `KeyboardInterrupt`, and
+  leaves earlier variables intact. It needs cross-origin isolation (above); on
+  a non-isolated page it's a no-op, and a tight loop with no calls (e.g.
+  `while true; x = x + 1; end`) has no checkpoint to abort at — both cases need
+  a kernel restart.
+- **`input()`** prompts in the notebook and blocks until you answer. It also
+  needs cross-origin isolation; without it, `input()` raises rather than
+  prompting.
+- **Figures are per-cell** (like inline matplotlib): `hold on` does not span
+  cells.
+- **Named functions go in `.m` files**, not cells (a numbl REPL limitation);
+  anonymous functions work in cells. See [`demo/content/fib.m`](demo/content/fib.m).
+- **`.m` sync is one-way**: deleting a file leaves its function defined until
+  the kernel restarts, and files written by cell code don't appear back in the
+  file browser.
+- **numbl is not MATLAB** — it covers a large, tested subset of the language
+  and toolboxes. See [numbl](https://numbl.org) for scope.
 
 ## Development
 
-Requires Python ≥ 3.9 and NodeJS ≥ 20, and `numbl >= 0.4.16` on npm — the
-release with the browser stdin API (`onInputRequest` / `provideInput` /
-`canInput`) behind `input()`; it also carries the `session.interrupt()` /
-`canInterrupt` cancellation API for cell interrupt (added in 0.4.15) and the
-incremental `session.execute` browser API this kernel is built on (0.4.14).
-To develop against an unreleased numbl checkout, run `npm pack` there and
-point the `numbl` dependency at the tarball (as `package.json` does while
-0.4.16 is being published).
+Requires Python ≥ 3.9, Node ≥ 20, and `numbl >= 0.4.16`.
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
@@ -184,9 +113,7 @@ pip install -e .      # editable install, registers the labextension
 pip install -r demo/requirements.txt
 jupyter lite build --lite-dir demo --contents content --output-dir demo/_output
 node demo/inject-coi.mjs demo/_output   # cross-origin isolation, for interrupt
-python -m http.server -d demo/_output 8000
-# then open http://localhost:8000 — a secure context, required for the
-# service worker (interrupt is a no-op without it)
+python -m http.server -d demo/_output 8000   # then open http://localhost:8000
 ```
 
 `jlpm watch` rebuilds on change during development.
@@ -194,7 +121,5 @@ python -m http.server -d demo/_output 8000
 ## License
 
 Apache-2.0. Built on [numbl](https://numbl.org) and
-the [JupyterLite](https://github.com/jupyterlite/jupyterlite) kernel API;
-scaffolding follows the
-[jupyterlite/echo-kernel](https://github.com/jupyterlite/echo-kernel)
-template.
+[JupyterLite](https://github.com/jupyterlite/jupyterlite); scaffolded from the
+[jupyterlite/echo-kernel](https://github.com/jupyterlite/echo-kernel) template.
